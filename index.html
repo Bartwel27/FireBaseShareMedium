@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload and Download Files</title>
+  <style>
+    .progress {
+      margin: 5px 0;
+      width: 100%;
+      background-color: #f3f3f3;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      position: relative;
+    }
+    .progress-bar {
+      height: 20px;
+      width: 0;
+      background-color: #4caf50;
+      text-align: center;
+      color: white;
+      line-height: 20px;
+      border-radius: 5px;
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload and Download Files with Firebase</h1>
+
+  <!-- File Input -->
+  <input type="file" id="fileInput">
+  
+  <!-- File Name Input -->
+  <input type="text" id="fileName" placeholder="Enter document name">
+
+  <!-- Upload Button -->
+  <button id="uploadBtn">Upload File</button>
+
+  <!-- Download Button -->
+  <button id="downloadBtn">Download File</button>
+
+  <!-- List of Uploaded Files -->
+  <h2>Uploaded Files</h2>
+  <ul id="fileList"></ul>
+
+  <!-- Firebase and Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL, listAll } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAia-o06VITI3SBWDntzqIw__HISDbDfEk",
+      authDomain: "njilotacreditsolutions-ed0c1.firebaseapp.com",
+      projectId: "njilotacreditsolutions-ed0c1",
+      storageBucket: "njilotacreditsolutions-ed0c1.appspot.com",
+      messagingSenderId: "809607896345",
+      appId: "1:809607896345:web:9d3d9cd49642476429b988",
+      measurementId: "G-8SZJD36FFC"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
+
+    // Upload File Function
+    function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const fileName = document.getElementById('fileName').value;
+
+      if (fileInput.files.length === 0 || !fileName) {
+        alert('Please select a file and enter a document name.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const storageRef = ref(storage, `files/${fileName}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`Upload is ${progress}% done`);
+        }, 
+        (error) => {
+          console.error('Upload failed:', error);
+        }, 
+        () => {
+          console.log('Upload complete');
+          listFiles(); // Update the file list after upload
+        }
+      );
+    }
+
+    // List Files Function
+    function listFiles() {
+      const listRef = ref(storage, 'files/');
+      listAll(listRef)
+        .then((res) => {
+          const fileList = document.getElementById('fileList');
+          fileList.innerHTML = ''; // Clear existing list
+
+          res.items.forEach((itemRef) => {
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = '#';
+            link.textContent = itemRef.name;
+            link.addEventListener('click', () => downloadFile(itemRef));
+            li.appendChild(link);
+
+            // Add a progress bar for download
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'progress';
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            progressDiv.appendChild(progressBar);
+            li.appendChild(progressDiv);
+
+            fileList.appendChild(li);
+          });
+        })
+        .catch((error) => {
+          console.error('Error listing files:', error);
+        });
+    }
+
+    // Download File Function
+    function downloadFile(itemRef) {
+      getDownloadURL(itemRef)
+        .then((url) => {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = itemRef.name;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        })
+        .catch((error) => {
+          console.error('Download failed:', error);
+        });
+    }
+
+    // Attach event listeners to buttons
+    document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+
+    // Initial file list load
+    listFiles();
+  </script>
+</body>
+</html>
